@@ -1,0 +1,58 @@
+version: "3.9"
+
+volumes:
+  db-data:
+
+services:
+  # ---------- PostgreSQL ----------
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shop
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - redash_default
+
+  # ---------- Data Generator ----------
+  generator:
+    build: ./generator
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: shop
+    restart: always
+    networks:
+      - redash_default
+
+  # ---------- Jupyter ----------
+  jupyter:
+    build: ./notebooks
+    ports:
+      - "8888:8888"
+    environment:
+      JUPYTER_TOKEN: "1234"
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: shop
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - redash_default
+
+networks:
+  redash_default:
+    external: true
